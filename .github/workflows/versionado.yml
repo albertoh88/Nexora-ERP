@@ -1,0 +1,28 @@
+name: Auto Tag Version
+
+on:
+  push:
+    branches:
+      - main # Cambia a 'master' si tu rama principal se llama así
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Descarga el código
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Trae todo el historial para calcular la versión
+
+      # 2. Crea la versión y la etiqueta automáticamente
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.71.0 # Versión estable de esta acción
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          # 3. Mapeamos tus palabras clave personalizadas aquí:
+          CUSTOM_TAGS: '{"feat:":"minor","fix:":"patch","breaking:":"major"}'
+          # Dejamos que si no encuentra ninguna palabra, no suba versión (o puedes cambiarlo a patch)
+          DEFAULT_BUMP: none
+
