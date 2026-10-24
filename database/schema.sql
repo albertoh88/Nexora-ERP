@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS materials (
     brand TEXT,
     quantity INTEGER NOT NULL,
     total_cost INTEGER NOT NULL,
-    created_at DATETIME,
-    updated_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active INTEGER NOT NULL DEFAULT 1
         CHECK (is_active IN (0, 1)),
 

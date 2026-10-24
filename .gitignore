@@ -150,6 +150,7 @@ venv.bak/
 
 # Gits
 .git
+
 ..gitignore.kate-swp
 
 # Spyder project settings

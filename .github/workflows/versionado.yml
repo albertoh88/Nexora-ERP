@@ -5,6 +5,9 @@ on:
     branches:
       - main # Cambia a 'master' si tu rama principal se llama así
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,9 +23,7 @@ jobs:
         uses: anothrNick/github-tag-action@1.71.0 # Versión estable de esta acción
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
+          TAG_PREFIX: true
           # 3. Mapeamos tus palabras clave personalizadas aquí:
-          CUSTOM_TAGS: '{"feat:":"minor","fix:":"patch","breaking:":"major"}'
           # Dejamos que si no encuentra ninguna palabra, no suba versión (o puedes cambiarlo a patch)
           DEFAULT_BUMP: none
-
