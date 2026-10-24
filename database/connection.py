@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 DATABASE_DIR = Path(__file__).resolve().parent
@@ -7,9 +8,10 @@ SCHEMA_PATH = DATABASE_DIR / "schema.sql"
 
 
 def initialize_database():
-    with sqlite3.connect(DB_PATH) as connection:
+    with closing(sqlite3.connect(DB_PATH)) as connection:
         schema = SCHEMA_PATH.read_text(encoding="utf-8")
         connection.executescript(schema)
+        connection.commit()
 
 
 def get_connection():
