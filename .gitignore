@@ -40,7 +40,7 @@ MANIFEST
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+#*.spec
 
 # Installer logs
 pip-log.txt
@@ -50,13 +50,13 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
-.coverage
 .coverage.*
+
 .cache
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
+
 .hypothesis/
 .pytest_cache/
 cover/
@@ -70,6 +70,10 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Flask stuff:
 instance/
@@ -104,7 +108,7 @@ ipython_config.py
 #   install all needed dependencies.
 
 # Archivos de dependencias
-Pipfile.lock
+#Pipfile.lock
 
 # UV
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
@@ -149,9 +153,9 @@ env.bak/
 venv.bak/
 
 # Gits
-.git
 
-..gitignore.kate-swp
+
+*.kate-swp
 
 # Spyder project settings
 .spyderproject
