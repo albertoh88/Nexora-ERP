@@ -1,8 +1,8 @@
 import os
 import time
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database.connection import initialize_database
-from repositories.material_repository import MaterialRepository
 from services.material_service import MaterialService
 
 material_service = MaterialService()
@@ -20,7 +20,10 @@ DIM     = "\033[2m"
 RESET   = "\033[0m"
 
 def clear():
-    os.system("cls" if os.name == "nt" else "clear")
+    if os.name == "nt":
+        os.system("cls")
+    else:
+        print("\033[2J\033[H", end="", flush=True)
 
 def banner():
     print(f"""
@@ -47,6 +50,72 @@ def invalid_option():
 def pause():
     input(f"\n  {DIM}Presiona Enter para continuar...{RESET}")
 
+def show_error(error):
+    print(f"\n {RED}{BOLD}* {error}{RESET}")
+
+# ===================== ENTRADA DE DATOS =====================
+
+def ask_text(prompt, required=True):
+    while True:
+        value = input(f" {BOLD}{prompt} {RESET}").strip()
+        if value or not required:
+            return value
+        print(f" {RED}Este campo não pode estar vazio{RESET}")
+
+def ask_int(prompt, minimum=None):
+    while True:
+        raw = input(f" {BOLD}{prompt} {RESET}").strip()
+        try:
+            value = int(raw)
+        except ValueError:
+            print(f" {RED}Escreva um número inteiro{RESET}")
+            continue
+        if minimum is not None and value < minimum:
+            print(f" {RED}Deve ser maior ou igual a {minimum}{RESET}")
+            continue
+        return value
+
+def ask_money(prompt):
+    """Peça um valor em reais (12,50 / 12,50 / R$ 1.234,56) e devolva-o em centavos."""
+    while True:
+        raw = input(f" {BOLD}{prompt} {RESET}").strip()
+        raw = raw.upper().replace("R$", "").replace(" ", "")
+        if "," in raw:
+            raw = raw.replace(".", "").replace(",", ".")
+        try:
+            value = Decimal(raw)
+        except InvalidOperation:
+            print(f"  {RED}Escreva um valor válido, por exemplo 12.50{RESET}")
+            continue
+        if not value.is_finite() or value < 0:
+            print(f"  {RED}O valor não pode ser negativo{RESET}")
+            continue
+        return int((value * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+# ===================== APRESENTAÇÃO =====================
+
+def format_money(cents):
+    """1234567 -> 'R$ 12.345,67'"""
+    value = f"{Decimal(cents) / 100:,.2f}"
+    value = value.replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"R$ {value}"
+
+def show_material(material):
+    quantity = material["quantity"]
+    total_cost = material["total_cost"]
+    unit = material.get("unit", "un")
+    unit_cost = (Decimal(total_cost) / 100 / quantity)
+    unit_cost_text = f"R$ {unit_cost:.4f}".replace(".", ",")
+    status = "Activo" if material["is_active"] else "Desactivado"
+
+    print()
+    print(f"  {BOLD}Nombre:{RESET}            {material['name']}")
+    print(f"  {BOLD}Marca:{RESET}             {material['brand'] or '—'}")
+    print(f"  {BOLD}Cantidad:{RESET}          {quantity} {unit}")
+    print(f"  {BOLD}Costo total:{RESET}       {format_money(total_cost)}")
+    print(f"  {BOLD}Costo por {unit}:{RESET}  {unit_cost_text}")
+    print(f"  {BOLD}Estado:{RESET}            {status}")
+
 # ===================== MATERIALES =====================
 def menu_materials():
     while True:
@@ -69,34 +138,49 @@ def menu_materials():
 
         if option == "1":
             clear()
-            print(f"\n  {GREEN}{BOLD}→ Registro de materiales{RESET}")
-            material_name = input(f"  {BOLD}Nombre del material {RESET}").strip()
-            material_marca = input(f"  {BOLD}Marca del material {RESET}").strip()
-            material_cantidad = int(input(f"  {BOLD}Cantidad de material {RESET}"))
-            material_total_cost = int(input(f"  {BOLD}Total de costo {RESET}"))
-            result = material_service.register_material(material_name, material_marca, material_cantidad, material_total_cost)
-            if result:
-                print("Registro con exito")
-            else:
-                print("No se pudo realizar el registro")
+            print(f"\n  {GREEN}{BOLD}→ Registro de materiales{RESET}\n")
+            name = ask_text("Nombre del material")
+            brand = ask_text("Marca del material (opcional)", required=False)
+            quantity = ask_int("Cantidad de material", minimum=1)
+            total_cost = ask_money("Costo total pagado (R$)")
+            try:
+                material_service.register_material(name, brand, quantity, total_cost)
+                print(f"\n {GREEN}{BOLD}✔ Material registrado con éxito{RESET}")
+            except (ValueError, RuntimeError) as e:
+                show_error(e)
             pause()
         elif option == "2":
             clear()
-            print(f"\n  {BLUE}{BOLD}→ Consultar materiales{RESET}")
-            material_name = input(f"  {BOLD}Nombre del material {RESET}").strip()
-            material_marca = input(f"  {BOLD}Marca del material {RESET}").strip()
-            result = material_service.consult_material(material_name, material_marca)
-            if result:
-                print(result)
-            else:
-                print(result)
+            print(f"\n  {BLUE}{BOLD}→ Consultar materiales{RESET}\n")
+            name = ask_text("Nombre del material")
+            brand = ask_text(f"Marca del material (opcional)", required=False)
+            try:
+                material = material_service.consult_material(name, brand)
+                if material is None:
+                    print(f"\n  {RED}{BOLD}✖ No existe un material con ese nombre y marca{RESET}")
+                else:
+                    show_material(material)
+            except (ValueError, RuntimeError) as e:
+                show_error(e)
             pause()
         elif option == "3":
             clear()
-            print(f"\n  {YELLOW}{BOLD}→ Actualizar materiales{RESET}")
-            material_name = input(f"  {BOLD}Nombre del material {RESET}").strip()
-            material_marca = input(f"  {BOLD}Marca del material {RESET}").strip()
-            result = material_service.update_material(material_name, material_marca)
+            print(f"\n  {YELLOW}{BOLD}→ Actualizar materiales{RESET}\n")
+            name = ask_text("Nombre del material")
+            brand = ask_text(f"Marca del material (opcional)", required=False)
+            try:
+                current = material_service.consult_material(name, brand)
+                if current is None:
+                    print(f"\n  {RED}{BOLD}✖ No existe un material con ese nombre y marca{RESET}")
+                else:
+                    show_material(current)
+                    print(f"\n  {DIM}Escribe los nuevos valores{RESET}\n")
+                    quantity = ask_int("Cantidad de material", minimum=1)
+                    total_cost = ask_money("Costo total pagado (R$)")
+                    material_service.update_material(name, brand, quantity, total_cost)
+                    print(f"\n  {GREEN}{BOLD}✔ Material actualizado con éxito{RESET}")
+            except (ValueError, RuntimeError) as e:
+                show_error(e)
             pause()
         elif option == "4":
             clear()
@@ -180,9 +264,10 @@ def menu():
 
 def main():
     initialize_database()
-    menu()
-
-
+    try:
+        menu()
+    except (KeyboardInterrupt, EOFError):
+        print(f"\n\n  {CYAN}{BOLD}Sistema NEXORA cerrado.{RESET}\n")
 
 if __name__ == "__main__":
     main()

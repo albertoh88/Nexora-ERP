@@ -1,48 +1,52 @@
-# Ejecuta el SQL correspondiente
+# Execute o SQL correspondente
 
 import sqlite3
-
 from contextlib import closing
+
 from database import connection
 
 class MaterialRepository:
 
-    def __init__(self):
-        pass
+    """Acesso à tabela `materiais`.
 
-    def update_material(self, material_name, material_brand, material_quantity, material_total_cost):
+    Convenção: `marca` chega sempre como texto ("" se não houver marca),
+    Nunca como nenhum. Então `marca = ? ` funciona e o ÚNICO (nome, marca)
+    da tabela também (em SQLite, dois NULLs nunca são considerados iguais)."""
+
+    def insert_material(self, name, brand, quantity, total_cost):
         try:
-            with closing(connection.get_connection()) as conn:
-                conn.execute("""UPDATE materials SET quantity = ?, total_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ? AND brand = ?""", (material_quantity, material_total_cost, material_name, material_brand))
+            # `with conn` faz commit se tudo correr bem e rollback se houver erro
+            with closing(connection.get_connection()) as conn, conn:
 
-                conn.commit()
-        except sqlite3.Error as e:
-            raise RuntimeError(f"Error while updating the material: {e}") from e
+                conn.execute("""INSERT INTO materials (name, brand, quantity, total_cost) VALUES (?, ?, ?, ?)""", (name, brand, quantity, total_cost))
 
-
-    def insert_material(self, material_name, material_brand, material_quantity, material_total_cost):
-        try:
-            with closing(connection.get_connection()) as conn:
-
-                conn.execute("""INSERT INTO materials (name, brand, quantity, total_cost) VALUES (?, ?, ?, ?)""", (material_name, material_brand, material_quantity, material_total_cost))
-
-                conn.commit()
                 return True
+        except sqlite3.IntegrityError as e:
+            raise ValueError("A material with this name and brand already exists.") from e
         except sqlite3.Error as e:
             raise RuntimeError(f"Error while inserting the material: {e}") from e
 
-
-    def exists_by_name(self, material_name, material_brand):
-
+    def update_material(self, name, brand, quantity, total_cost):
         try:
-
-            with closing(connection.get_connection()) as conn:
-
-                cursor = conn.execute("""SELECT 1 FROM materials WHERE name = ? AND brand IS ? LIMIT 1""", (material_name,material_brand))
-
-                return cursor.fetchone() is not None
-
+            with closing(connection.get_connection()) as conn, conn:
+                cursor = conn.execute("""UPDATE materials SET quantity = ?, total_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ? COLLATE NOCASE AND brand = ? COLLATE NOCASE""", (quantity, total_cost, name, brand))
+                if cursor.rowcount == 0:
+                    raise ValueError("Material not found.")
+            return True
         except sqlite3.Error as e:
-            raise RuntimeError(f"Error while querying the material: {e}") from e
+            raise RuntimeError(f"Error while updating the material: {e}") from e
+
+    def get_by_name(self, name, brand):
+        """Retorne o material como um ditado, ou nenhum se ele não existe."""
+        try:
+            with closing(connection.get_connection()) as conn:
+                row = conn.execute("SELECT * FROM materials WHERE name = ? COLLATE NOCASE AND brand = ? COLLATE NOCASE LIMIT 1", (name, brand),).fetchone()
+                return dict(row) if row else None
+        except sqlite3.Error as e:
+            raise RuntimeError(f"Error while getting the material: {e}") from e
+
+    def exists_by_name(self, name, brand):
+        return self.get_by_name(name, brand) is not None
+
 
 
