@@ -13,6 +13,16 @@ class MaterialRepository:
     Nunca como nenhum. Então `marca = ? ` funciona e o ÚNICO (nome, marca)
     da tabela também (em SQLite, dois NULLs nunca são considerados iguais)."""
 
+    def set_active(self, name, brand, is_active):
+        try:
+            with closing(connection.get_connection()) as conn, conn:
+                cursor = conn.execute("""UPDATE materials SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ? COLLATE NOCASE AND brand = ? COLLATE NOCASE""", (is_active, name, brand))
+                if cursor.rowcount == 0:
+                    raise ValueError("Material not found.")
+            return True
+        except sqlite3.Error as e:
+            raise RuntimeError(f"Error while updating the material: {e}") from e
+
     def insert_material(self, name, brand, quantity, total_cost):
         try:
             # `with conn` faz commit se tudo correr bem e rollback se houver erro

@@ -74,4 +74,18 @@ class MaterialService:
     def material_exists(self, name, brand=None):
         return self.consult_material(name, brand) is not None
 
+    def deactivate_material(self, name, brand=None):
+        return self._set_active(name, brand, 0)
+
+    def reactivate_material(self, name, brand=None):
+        return self._set_active(name, brand, 1)
+
+    def _set_active(self, name, brand, is_active):
+        name, brand = self._clean_name(name), self._clean_brand(brand)
+        is_active = 0
+        if not self.repository.exists_by_name(name, brand):
+            raise ValueError("Material not found.")
+        return self.repository.set_active(name, brand, is_active)
+
+
 

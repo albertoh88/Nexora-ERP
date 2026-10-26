@@ -129,6 +129,7 @@ def menu_materials():
         print_option("2", "Consultar materiales", BLUE)
         print_option("3", "Actualizar materiales", YELLOW)
         print_option("4", "Desactivar materiales", RED)
+        print_option("5", "Reactivar materiales", RED)
         print()
         print_option("0", "Volver al menú principal", DIM)
         print()
@@ -184,7 +185,25 @@ def menu_materials():
             pause()
         elif option == "4":
             clear()
-            print(f"\n  {RED}{BOLD}→ Desactivar materiales{RESET}")
+            print(f"\n  {RED}{BOLD}→ Desactivar materiale{RESET}\n")
+            name = ask_text("Nombre del material")
+            brand = ask_text(f"Marca del material (opcional)", required=False)
+            try:
+                material_service.deactivate_material(name, brand)
+                print(f"\n {GREEN}{BOLD}✔ Material desactivado con éxito{RESET}")
+            except (ValueError, RuntimeError) as e:
+                show_error(e)
+            pause()
+        elif option == "5":
+            clear()
+            print(f"\n  {RED}{BOLD}→ Reactivar materiale{RESET}\n")
+            name = ask_text("Nombre del material")
+            brand = ask_text(f"Marca del material (opcional)", required=False)
+            try:
+                material_service.reactivate_material(name, brand)
+                print(f"\n {GREEN}{BOLD}✔ Material reactivado con éxito{RESET}")
+            except (ValueError, RuntimeError) as e:
+                show_error(e)
             pause()
         elif option == "0":
             break
